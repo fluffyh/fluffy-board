@@ -71,11 +71,11 @@
         // In a production app, you'd want proper Auth Policies (RLS).
         const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjc2dhcGhwZGp2ZGRzanBncXhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5Mjc3MjcsImV4cCI6MjA4NTUwMzcyN30.D6OMD37IyTRJACaQwHUop-CKBIuOtwzzh11uHLBKn1U'; 
 
-        const supabase = window.supabase.createClient(PROJECT_URL, ANON_KEY);
+        const sbClient = window.supabase.createClient(PROJECT_URL, ANON_KEY);
 
         async function fetchTasks() {
             document.getElementById('status').innerText = 'Loading...';
-            const { data, error } = await supabase
+            const { data, error } = await sbClient
                 .from('tasks')
                 .select('*')
                 .order('created_at', { ascending: false });
@@ -113,7 +113,7 @@
             const title = input.value.trim();
             if (!title) return;
 
-            const { error } = await supabase.from('tasks').insert([{ title, status: 'todo' }]);
+            const { error } = await sbClient.from('tasks').insert([{ title, status: 'todo' }]);
             if (error) alert(error.message);
             else {
                 input.value = '';
@@ -124,7 +124,7 @@
         async function updateStatus(id, newStatus) {
             // Map UI columns back to DB status
             const dbStatus = newStatus === 'doing' ? 'doing' : newStatus; 
-            await supabase.from('tasks').update({ status: dbStatus }).eq('id', id);
+            await sbClient.from('tasks').update({ status: dbStatus }).eq('id', id);
         }
 
         // Drag & Drop Logic
@@ -156,8 +156,8 @@
                 // Initialize with user provided key for this session
                 window.supabaseClient = window.supabase.createClient(PROJECT_URL, key);
                 // Monkey patch our local variable for the fetch function (simplified)
-                supabase.auth = window.supabaseClient.auth;
-                supabase.from = window.supabaseClient.from;
+                sbClient.auth = window.supabaseClient.auth;
+                sbClient.from = window.supabaseClient.from;
                 fetchTasks();
             }
         } else {

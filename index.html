@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fluffy Board ☁️ v1.1</title>
+    <title>Fluffy Board ☁️ v2.0 (Secure)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
@@ -12,69 +12,125 @@
         .card { transition: all 0.2s; cursor: grab; }
         .card:active { cursor: grabbing; transform: scale(1.02); }
         .ghost { opacity: 0.5; background: #333; border: 2px dashed #555; }
+        .hidden { display: none; }
     </style>
 </head>
 <body class="p-8">
-    <div class="flex justify-between items-center mb-8">
-        <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
-            Fluffy Board ☁️
-        </h1>
-        <div class="text-sm text-gray-400" id="status">Connecting...</div>
+
+    <!-- Auth Screen -->
+    <div id="auth-screen" class="flex flex-col items-center justify-center h-screen -mt-20">
+        <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-96 border border-gray-700">
+            <h1 class="text-2xl font-bold mb-6 text-center bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+                Fluffy Board ☁️
+            </h1>
+            <p class="text-sm text-gray-400 mb-4 text-center">Please log in to access tasks.</p>
+            
+            <input type="email" id="email" placeholder="Email" class="w-full bg-gray-900 border border-gray-600 rounded px-4 py-2 mb-3 focus:outline-none focus:border-blue-500">
+            <input type="password" id="password" placeholder="Password" class="w-full bg-gray-900 border border-gray-600 rounded px-4 py-2 mb-6 focus:outline-none focus:border-blue-500">
+            
+            <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded transition mb-3">
+                Log In
+            </button>
+            <button onclick="handleSignUp()" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded transition">
+                Sign Up
+            </button>
+            <div id="auth-error" class="text-red-400 text-sm mt-4 text-center h-4"></div>
+        </div>
     </div>
 
-    <!-- Add Task Input -->
-    <div class="mb-8 flex gap-2">
-        <input type="text" id="newTaskInput" placeholder="New task..." 
-               class="bg-gray-800 border border-gray-700 rounded px-4 py-2 w-full focus:outline-none focus:border-blue-500">
-        <button onclick="addTask()" 
-                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded transition">
-            Add
-        </button>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Todo Column -->
-        <div class="bg-gray-900 rounded-lg p-4 shadow-lg border border-gray-800">
-            <h2 class="text-xl font-semibold mb-4 flex items-center gap-2 text-red-400">
-                <span class="w-3 h-3 rounded-full bg-red-400"></span> To Do
-            </h2>
-            <div id="todo" class="column space-y-3" ondrop="drop(event)" ondragover="allowDrop(event)">
-                <!-- Tasks injected here -->
+    <!-- App Screen (Hidden by default) -->
+    <div id="app-screen" class="hidden">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+                Fluffy Board ☁️
+            </h1>
+            <div class="flex items-center gap-4">
+                <div class="text-sm text-gray-400" id="user-email"></div>
+                <button onclick="handleLogout()" class="text-sm text-red-400 hover:text-red-300">Logout</button>
             </div>
         </div>
 
-        <!-- Doing Column -->
-        <div class="bg-gray-900 rounded-lg p-4 shadow-lg border border-gray-800">
-            <h2 class="text-xl font-semibold mb-4 flex items-center gap-2 text-yellow-400">
-                <span class="w-3 h-3 rounded-full bg-yellow-400"></span> Doing
-            </h2>
-            <div id="doing" class="column space-y-3" ondrop="drop(event)" ondragover="allowDrop(event)">
-                <!-- Tasks injected here -->
-            </div>
+        <!-- Add Task Input -->
+        <div class="mb-8 flex gap-2">
+            <input type="text" id="newTaskInput" placeholder="New task..." 
+                   class="bg-gray-800 border border-gray-700 rounded px-4 py-2 w-full focus:outline-none focus:border-blue-500">
+            <button onclick="addTask()" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded transition">
+                Add
+            </button>
         </div>
 
-        <!-- Done Column -->
-        <div class="bg-gray-900 rounded-lg p-4 shadow-lg border border-gray-800">
-            <h2 class="text-xl font-semibold mb-4 flex items-center gap-2 text-green-400">
-                <span class="w-3 h-3 rounded-full bg-green-400"></span> Done
-            </h2>
-            <div id="done" class="column space-y-3" ondrop="drop(event)" ondragover="allowDrop(event)">
-                <!-- Tasks injected here -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Todo Column -->
+            <div class="bg-gray-900 rounded-lg p-4 shadow-lg border border-gray-800">
+                <h2 class="text-xl font-semibold mb-4 flex items-center gap-2 text-red-400">
+                    <span class="w-3 h-3 rounded-full bg-red-400"></span> To Do
+                </h2>
+                <div id="todo" class="column space-y-3" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+            </div>
+
+            <!-- Doing Column -->
+            <div class="bg-gray-900 rounded-lg p-4 shadow-lg border border-gray-800">
+                <h2 class="text-xl font-semibold mb-4 flex items-center gap-2 text-yellow-400">
+                    <span class="w-3 h-3 rounded-full bg-yellow-400"></span> Doing
+                </h2>
+                <div id="doing" class="column space-y-3" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+            </div>
+
+            <!-- Done Column -->
+            <div class="bg-gray-900 rounded-lg p-4 shadow-lg border border-gray-800">
+                <h2 class="text-xl font-semibold mb-4 flex items-center gap-2 text-green-400">
+                    <span class="w-3 h-3 rounded-full bg-green-400"></span> Done
+                </h2>
+                <div id="done" class="column space-y-3" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // CONFIGURATION (Injected by Fluffy)
         const PROJECT_URL = 'https://ecsgaphpdjvddsjpgqxi.supabase.co';
-        // Note: For this MVP, we are using the ANON key. 
-        // In a production app, you'd want proper Auth Policies (RLS).
-        const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjc2dhcGhwZGp2ZGRzanBncXhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5Mjc3MjcsImV4cCI6MjA4NTUwMzcyN30.D6OMD37IyTRJACaQwHUop-CKBIuOtwzzh11uHLBKn1U'; 
-
+        const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjc2dhcGhwZGp2ZGRzanBncXhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5Mjc3MjcsImV4cCI6MjA4NTUwMzcyN30.D6OMD37IyTRJACaQwHUop-CKBIuOtwzzh11uHLBKn1U';
+        
         const sbClient = window.supabase.createClient(PROJECT_URL, ANON_KEY);
 
+        // --- Auth Logic ---
+        sbClient.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('app-screen').classList.remove('hidden');
+                document.getElementById('user-email').innerText = session.user.email;
+                fetchTasks();
+            } else {
+                document.getElementById('auth-screen').classList.remove('hidden');
+                document.getElementById('app-screen').classList.add('hidden');
+            }
+        });
+
+        async function handleLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const { error } = await sbClient.auth.signInWithPassword({ email, password });
+            if (error) showError(error.message);
+        }
+
+        async function handleSignUp() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const { error } = await sbClient.auth.signUp({ email, password });
+            if (error) showError(error.message);
+            else showError("Check your email for confirmation link!");
+        }
+
+        async function handleLogout() {
+            await sbClient.auth.signOut();
+        }
+
+        function showError(msg) {
+            document.getElementById('auth-error').innerText = msg;
+        }
+
+        // --- App Logic ---
         async function fetchTasks() {
-            document.getElementById('status').innerText = 'Loading...';
             const { data, error } = await sbClient
                 .from('tasks')
                 .select('*')
@@ -82,20 +138,17 @@
 
             if (error) {
                 console.error(error);
-                document.getElementById('status').innerText = 'Error: ' + error.message;
                 return;
             }
 
-            // Clear columns
             ['todo', 'doing', 'done'].forEach(id => document.getElementById(id).innerHTML = '');
 
             data.forEach(task => {
                 const el = createTaskElement(task);
-                const colId = task.status === 'in_progress' ? 'doing' : task.status; // Map statuses
+                const colId = task.status === 'in_progress' ? 'doing' : task.status;
                 const target = document.getElementById(colId) || document.getElementById('todo');
                 target.appendChild(el);
             });
-            document.getElementById('status').innerText = 'Live';
         }
 
         function createTaskElement(task) {
@@ -122,12 +175,10 @@
         }
 
         async function updateStatus(id, newStatus) {
-            // Map UI columns back to DB status
             const dbStatus = newStatus === 'doing' ? 'doing' : newStatus; 
             await sbClient.from('tasks').update({ status: dbStatus }).eq('id', id);
         }
 
-        // Drag & Drop Logic
         function allowDrop(ev) { ev.preventDefault(); }
         function drag(ev) { ev.dataTransfer.setData("text", ev.target.id); ev.target.classList.add('ghost'); }
         function drop(ev) {
@@ -136,32 +187,15 @@
             const el = document.getElementById(data);
             el.classList.remove('ghost');
             
-            // Find closest column
             let target = ev.target;
             while (!target.classList.contains('column')) {
                 target = target.parentElement;
-                if (!target) return; // Dropped outside
+                if (!target) return;
             }
             
             target.appendChild(el);
             const taskId = data.replace('task-', '');
             updateStatus(taskId, target.id);
-        }
-
-        // Init
-        // If key is missing, prompt user
-        if (ANON_KEY === 'PASTE_ANON_KEY_HERE') {
-            const key = prompt("Please enter your Supabase ANON KEY (from Project Settings -> API):");
-            if (key) {
-                // Initialize with user provided key for this session
-                window.supabaseClient = window.supabase.createClient(PROJECT_URL, key);
-                // Monkey patch our local variable for the fetch function (simplified)
-                sbClient.auth = window.supabaseClient.auth;
-                sbClient.from = window.supabaseClient.from;
-                fetchTasks();
-            }
-        } else {
-            fetchTasks();
         }
     </script>
 </body>
